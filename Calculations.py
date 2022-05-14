@@ -1,32 +1,17 @@
 import numpy as np
+import numpy.linalg as linalg
 
-#Calculate vector F: f_i = sigmoid(sum(W[i][j]*s[i]) - h)
-def calculate_F(W, s, h, M, N):
-    F = np.zeros(M, )
-    for j in range(M):
-        f_j = 0
-        for i in range(N):
-            f_j += W[i][j]*s[i]
-        f_j = f_j - h
-        
-        #Sigmoid
-        F[j] = 1/(1 + np.exp(-0.5*f_j))
-    return F
-   
-#Calculate fitness F = coefC * exp(coefLambda * W_fit)
-def calculate_Fitness(B, C, W, s, h, coefC, coefLambda, M, N):
-    F = calculate_F(W, s, h, M, N)
-    
-    #W_fit = (B*F, F)/2  + (C, F) or W_fit = sum(C[i]F[i]) + sum(sum(B[i][j]*F[i]*F[j]))
-    W_fit = np.dot((B@F), F)/2 + np.dot(C, F)
+def calculate_W_max(W, B, C):
+    inv_B = linalg.inv(B)
+    W_max = np.dot(inv_B @ C.T, C) * (-0.5)
+    return W_max
 
-    return coefC*np.exp(coefLambda*W_fit)
+#Calculate trait function vector f: f_i = sigmoid(sum(W[i][j]*s[i]) - h)    
+def calculate_F_vector(genotype, W, h, sigma):
+    f_vector = []
+    for row in W.T:
+        f_vector.append(sigma(sum(row*genotype) - h))
+    return np.asarray(f_vector)
 
-#Simple flip mutation
-def mutate(s, N, N_pop, p_mut):
-    for i in range(N_pop):
-        for j in range(N):
-            r = np.random.sample()
-            if (r <= p_mut):
-                s[j, i] = 1 - s[j, i]
-    return s   
+def calculate_W(f_vector, B, C):
+    return np.dot((B@f_vector), f_vector)/2 + np.dot(C,f_vector)

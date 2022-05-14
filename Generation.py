@@ -1,37 +1,40 @@
 import numpy as np
 
 #Generating matrices W, B, C
-def generateWBC(N, M, K):
-    #Generating W MxN matrix, that holds weights w_i_j for f_i(s) = sigmoid(sum(w_i_j*s_j) - h_i)
-    #Poisson dist for non-zero weights. It consists of Ki - values representing number of non-zero weights
-    poisson_distr = np.random.poisson(K, size=(N,))
+def generateWBC(N, M, K, plietropy):    
+    #Generating W NxM matrix, that holds weights w_i_j for f_j(s) = sigmoid(sum(w_i_j*s_i) - h)
+    #Element a[i, j] means that  i-th gene affects j-th trait
+    W = np.zeros((N, M))
     
-    print("--------------DEBUG---------------")
-    print("Average non-zero:", np.absolute(poisson_distr.mean()))
-    print("Weights M vector for M traits: ", poisson_distr)
-    
-    W = np.zeros((N,M))
-    for i in range(N):
-        #Generating -1 and 1 weights
-        weights = np.random.choice([1,-1], size=poisson_distr[i], p=[0.5, 0.5])
-        #Generating M - Ki zero weights
-        weights = np.concatenate( (weights, np.zeros( (M - poisson_distr[i], ) ) ) )
+    #Poisson dist for nonzero weights. It consists of Ki - values representing number of non-zero weights
+    if plietropy == "poisson":
+        poisson_distr = np.random.poisson(K, size=(N,))
+        for i in range(N):
+            #Generating -1 and 1 weights
+            weights = np.random.choice([1,-1], size=poisson_distr[i], p=[0.5, 0.5])
+            #Generating M - Ki zero weights
+            #To fix: If M approximately equal to K, there could occur exception,because poisson_distr[i] may be greater than M 
+            weights = np.concatenate((weights, np.zeros((M - poisson_distr[i], ))))
+            
+            W[i] = np.random.permutation(weights)
+        W = W.astype(int)
         
-        weights = np.random.permutation(weights)
-        W[i] = weights
-    W = W.astype(int)
-
+    #Fair coin  
+    elif plietropy == "fair":
+        for i in range(N):
+            weights = np.random.choice([1,-1], size = K, p=[0.5, 0.5])
+            weights = np.concatenate((weights, np.zeros((M-K, ))))
+            W[i] = np.random.permutation(weights)
+            
     #Generating B
-    B = np.random.uniform(low=1.0, high=10.0, size=(M,M))
+    B = np.random.rand(M, M)
     B = np.tril(B) + np.tril(B, -1).T
     
     #Generating C
-    C = np.random.uniform(low=1.0, high=10.0, size=(M,))
+    C = np.random.rand(M, )
     
     return (W, B, C)
     
-#Generating boolean vector
-def generateGenPool(N, N_pop):
-    s = np.random.choice([0,1], (N, N_pop))
-    return s
-    
+#Generating boolean vector 
+def generateGenPool(N):
+    return np.random.choice([0,1], (N, ))
