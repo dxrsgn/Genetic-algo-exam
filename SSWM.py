@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Generation as gen
 import Mutators as mut
-from Calculations import calculate_W_max, calculate_F_vector, calculate_W
+import math
+from Calculations import *
 
 #Fitness function: coef_C * exp(coef_Lambda * W(s)), where W(s) = (B*f_vector, f_vector)/2 + (C, f_vector)
 
@@ -26,18 +27,19 @@ class SSWM:
         
         #Way of distributing nonzero weights (-1 or 1) for matrix W
         #"fair" - fair coin, "poisson" - poisson distribution
-        self.plietropy = kwargs.get('plietropy', "fair")
+        self.pleiotropy = kwargs.get('pleiotropy', "fair")
         
         #Rewrite!!!
-        #Making copy of model with slightly different parameters
+        #Making copy of model with slightly different parameters. It is used for debug purposes
         if 'W' in kwargs and 'B' in kwargs and 'C' in kwargs and 'genotype' in kwargs:
             self.W = kwargs.get('W')
             self.B = kwargs.get('B')
             self.C = kwargs.get('C')
             self.genotype = kwargs.get('genotype')
+            
         #Generating matrices W, B, C
         else:
-            self.W, self.B, self.C = gen.generateWBC(N, M, K, self.plietropy)
+            self.W, self.B, self.C = gen.generateWBC(N, M, K, self.pleiotropy)
             self.genotype = None
         
         #Sigmoid function for calculting trait function
@@ -61,7 +63,9 @@ class SSWM:
             self.fitness_type = lambda x : x
         
         #F_max - maximal theoretical fitness for given W, B, C
-        self.F_max = self.fitness_type(calculate_W_max(self.W,self.B,self.C))
+        self.F_max = self.fitness_type(calculate_my_W_max(self.W,self.B,self.C,self.sigma, self.h))
+        #self.F_max = self.fitness_type(calculate_W_max(self.W,self.B,self.C))
+        #self.F_max = self.fitness_type(just_another_W_max(self.W, self.B, self.C, M))
         
         self.fitness_history = []
         self.generation_history = []
@@ -72,7 +76,7 @@ class SSWM:
         return self.fitness_type(calculate_W(f_vector, self.B, self.C))
     
     def evolve(self):
-        #Generating population
+        #Generating population if it's not given
         if type(self.genotype) == type(None):
             self.genotype = gen.generateGenPool(self.N)
             
@@ -84,7 +88,8 @@ class SSWM:
         cur_fitness = self.calculate_Fitness(f_vector)
         
         T = 0
-        while T < self.T_stop:
+        #Evolving until T reaches T_stop or until we (almost) completely adapt our genotype
+        while T < self.T_stop and cur_fitness < self.coef_Beta*self.F_max: 
             f_vector = calculate_F_vector(self.genotype, self.W, self.h, self.sigma)
             cur_fitness = self.calculate_Fitness(f_vector)
             
@@ -93,17 +98,19 @@ class SSWM:
             new_f_vector = calculate_F_vector(new_genotype, self.W, self.h, self.sigma)
             new_fitness = self.calculate_Fitness(new_f_vector)
             
-            #Strong selection. If nonmutated genotype is less adapted than mutated one,
-            #then replace it with mutated
+            #Strong selection. If old genotype is less adapted than new one,
+            #then replace it with new genotype
             if (new_fitness > cur_fitness):
                 self.genotype = new_genotype
             
+            #Saving history
             self.fitness_history.append(cur_fitness)
             self.generation_history.append(T)
             self.fittest = self.genotype
             
             T += 1
             
+    #Fitness graph        
     def show(self):
         plt.axhline(y=self.F_max, color='r', label='F max')
         plt.plot(self.generation_history, self.fitness_history, 'b', label='Fitness')
@@ -113,7 +120,7 @@ class SSWM:
         plt.grid()
         plt.show()
     
-    #Rewrite
+    #Get matrices W, B and vector C, genotype for debug purposes
     def getWBCGenotype(self):
         return (self.W, self.B, self.C, self.first_genotype)
     
@@ -121,4 +128,9 @@ class SSWM:
     def getFmax(self):
         return max(self.fitness_history)
         
-        
+    #Return max theoretical fitness 
+    def getTheoWmax(self):
+        return self.fitness_type(calculate_my_W_max(self.W,self.B,self.C,self.sigma, self.h))
+        #return just_another_W_max(self.W,self.B,self.C,self.M)
+        #return calculate_W_max(self.W,self.B,self.C)
+    
