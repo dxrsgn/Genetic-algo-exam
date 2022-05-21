@@ -63,7 +63,7 @@ class SSWM:
             self.fitness_type = lambda x : x
         
         #F_max - maximal theoretical fitness for given W, B, C
-        self.F_max = self.fitness_type(calculate_my_W_max(self.W,self.B,self.C,self.sigma, self.h))
+        self.F_max = self.fitness_type(calculate_naive_W_max(self.W,self.B,self.C,self.sigma, self.h))
         #self.F_max = self.fitness_type(calculate_W_max(self.W,self.B,self.C))
         #self.F_max = self.fitness_type(just_another_W_max(self.W, self.B, self.C, M))
         
@@ -88,8 +88,8 @@ class SSWM:
         cur_fitness = self.calculate_Fitness(f_vector)
         
         T = 0
-        #Evolving until T reaches T_stop or until we (almost) completely adapt our genotype
-        while T < self.T_stop and cur_fitness < self.coef_Beta*self.F_max: 
+        #Evolving until T reaches T_stop or until we (almost) completely adapt our genotype (cur_fitness < self.coef_Beta*self.F_max)
+        while T < self.T_stop: 
             f_vector = calculate_F_vector(self.genotype, self.W, self.h, self.sigma)
             cur_fitness = self.calculate_Fitness(f_vector)
             
@@ -111,8 +111,9 @@ class SSWM:
             T += 1
             
     #Fitness graph        
-    def show(self):
-        plt.axhline(y=self.F_max, color='r', label='F max')
+    def show(self, fmax):
+        if fmax == True:
+            plt.axhline(y=self.F_max, color='r', label='F max')
         plt.plot(self.generation_history, self.fitness_history, 'b', label='Fitness')
         plt.xlabel("Generation")
         plt.ylabel("Fitness")
@@ -128,9 +129,4 @@ class SSWM:
     def getFmax(self):
         return max(self.fitness_history)
         
-    #Return max theoretical fitness 
-    def getTheoWmax(self):
-        return self.fitness_type(calculate_my_W_max(self.W,self.B,self.C,self.sigma, self.h))
-        #return just_another_W_max(self.W,self.B,self.C,self.M)
-        #return calculate_W_max(self.W,self.B,self.C)
     
